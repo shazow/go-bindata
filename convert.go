@@ -31,7 +31,7 @@ func Translate(c *Config) error {
 	var visitedPaths = make(map[string]bool)
 	// Locate all the assets.
 	for _, input := range c.Input {
-		err = findFiles(input.Path, c.Prefix, input.Recursive, &toc, c.Ignore, knownFuncs, visitedPaths)
+		err = findFiles(input.Path, input.Name, c.Prefix, input.Recursive, &toc, c.Ignore, knownFuncs, visitedPaths)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func (v ByName) Less(i, j int) bool { return v[i].Name() < v[j].Name() }
 // findFiles recursively finds all the file paths in the given directory tree.
 // They are added to the given map as keys. Values will be safe function names
 // for each file, which will be used when generating the output code.
-func findFiles(dir, prefix string, recursive bool, toc *[]Asset, ignore []*regexp.Regexp, knownFuncs map[string]int, visitedPaths map[string]bool) error {
+func findFiles(dir, name, prefix string, recursive bool, toc *[]Asset, ignore []*regexp.Regexp, knownFuncs map[string]int, visitedPaths map[string]bool) error {
 	dirpath := dir
 	if len(prefix) > 0 {
 		dirpath, _ = filepath.Abs(dirpath)
@@ -174,8 +174,12 @@ func findFiles(dir, prefix string, recursive bool, toc *[]Asset, ignore []*regex
 		if file.IsDir() {
 			if recursive {
 				recursivePath := filepath.Join(dir, file.Name())
+				recursiveName := ""
+				if name != "" {
+					recursiveName = filepath.Join(name, file.Name())
+				}
 				visitedPaths[asset.Path] = true
-				findFiles(recursivePath, prefix, recursive, toc, ignore, knownFuncs, visitedPaths)
+				findFiles(recursivePath, recursiveName, prefix, recursive, toc, ignore, knownFuncs, visitedPaths)
 			}
 			continue
 		} else if file.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -190,12 +194,14 @@ func findFiles(dir, prefix string, recursive bool, toc *[]Asset, ignore []*regex
 			}
 			if _, ok := visitedPaths[linkPath]; !ok {
 				visitedPaths[linkPath] = true
-				findFiles(asset.Path, prefix, recursive, toc, ignore, knownFuncs, visitedPaths)
+				findFiles(asset.Path, name, prefix, recursive, toc, ignore, knownFuncs, visitedPaths)
 			}
 			continue
 		}
 
-		if strings.HasPrefix(asset.Name, prefix) {
+		if name != "" {
+			asset.Name = filepath.Join(name, asset.Name[len(dir):])
+		} else if strings.HasPrefix(asset.Name, prefix) {
 			asset.Name = asset.Name[len(prefix):]
 		} else {
 			asset.Name = filepath.Join(dir, file.Name())

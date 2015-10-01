@@ -19,7 +19,7 @@ func TestFindFiles(t *testing.T) {
 	var toc []Asset
 	var knownFuncs = make(map[string]int)
 	var visitedPaths = make(map[string]bool)
-	err := findFiles("testdata/dupname", "testdata/dupname", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	err := findFiles("testdata/dupname", "", "testdata/dupname", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
 	if err != nil {
 		t.Errorf("expected to be no error: %+v", err)
 	}
@@ -34,14 +34,14 @@ func TestFindFilesWithSymlinks(t *testing.T) {
 
 	var knownFuncs = make(map[string]int)
 	var visitedPaths = make(map[string]bool)
-	err := findFiles("testdata/symlinkSrc", "testdata/symlinkSrc", true, &tocSrc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	err := findFiles("testdata/symlinkSrc", "", "testdata/symlinkSrc", true, &tocSrc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
 	if err != nil {
 		t.Errorf("expected to be no error: %+v", err)
 	}
 
 	knownFuncs = make(map[string]int)
 	visitedPaths = make(map[string]bool)
-	err = findFiles("testdata/symlinkParent", "testdata/symlinkParent", true, &tocTarget, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	err = findFiles("testdata/symlinkParent", "", "testdata/symlinkParent", true, &tocTarget, []*regexp.Regexp{}, knownFuncs, visitedPaths)
 	if err != nil {
 		t.Errorf("expected to be no error: %+v", err)
 	}
@@ -64,7 +64,7 @@ func TestFindFilesWithRecursiveSymlinks(t *testing.T) {
 
 	var knownFuncs = make(map[string]int)
 	var visitedPaths = make(map[string]bool)
-	err := findFiles("testdata/symlinkRecursiveParent", "testdata/symlinkRecursiveParent", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	err := findFiles("testdata/symlinkRecursiveParent", "", "testdata/symlinkRecursiveParent", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
 	if err != nil {
 		t.Errorf("expected to be no error: %+v", err)
 	}
@@ -79,12 +79,47 @@ func TestFindFilesWithSymlinkedFile(t *testing.T) {
 
 	var knownFuncs = make(map[string]int)
 	var visitedPaths = make(map[string]bool)
-	err := findFiles("testdata/symlinkFile", "testdata/symlinkFile", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	err := findFiles("testdata/symlinkFile", "", "testdata/symlinkFile", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
 	if err != nil {
 		t.Errorf("expected to be no error: %+v", err)
 	}
 
 	if len(toc) != 1 {
 		t.Errorf("Only one asset should have been found.  Got %d: %v", len(toc), toc)
+	}
+}
+
+func TestFindFilesWithName(t *testing.T) {
+	var toc []Asset
+	var knownFuncs = make(map[string]int)
+	var visitedPaths = make(map[string]bool)
+	err := findFiles("testdata/dupname/foo_bar", "baz", "", false, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	if err != nil {
+		t.Errorf("expected to be no error: %+v", err)
+	}
+	if len(toc) != 1 {
+		t.Errorf("Only one asset should have been found.  Got %d: %+v", len(toc), toc)
+	}
+	if toc[0].Name != "baz" {
+		t.Errorf("Expected renamed asset.  Got: %+v", toc[0])
+	}
+}
+
+func TestFindFilesWithNameRecursive(t *testing.T) {
+	var toc []Asset
+	var knownFuncs = make(map[string]int)
+	var visitedPaths = make(map[string]bool)
+	err := findFiles("testdata/dupname", "baz", "", true, &toc, []*regexp.Regexp{}, knownFuncs, visitedPaths)
+	if err != nil {
+		t.Errorf("expected to be no error: %+v", err)
+	}
+	if len(toc) != 2 {
+		t.Errorf("Only two assets should have been found.  Got %d: %+v", len(toc), toc)
+	}
+	if toc[0].Name != "baz/foo/bar" {
+		t.Errorf("Expected renamed asset.  Got: %+v", toc[0])
+	}
+	if toc[1].Name != "baz/foo_bar" {
+		t.Errorf("Expected renamed asset.  Got: %+v", toc[1])
 	}
 }
